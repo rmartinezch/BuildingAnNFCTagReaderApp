@@ -17,7 +17,7 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
     
     @IBAction func beginScanning(_ sender: Any) {
         session = NFCTagReaderSession(pollingOption: .iso14443, delegate: self)
-        session?.alertMessage = "Hold your iPhone near the ISO7816 tag to begin transaction."
+        session?.alertMessage = "Hold your iPhone near the ISO7816 tag to begin transaction 8."
         session?.begin()
     }
     
@@ -56,28 +56,34 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
         // 00A40400 0E E828BD080FD25047656E65726963
         //let selectApp : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0xA4, 0x04, 0x00, 0x08, 0x50, 0x41, 0x59, 0x2E, 0x54, 0x49, 0x43, 0x4C, 0x00]))!
         let selectApp : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0xA4, 0x04, 0x00, 0x0E, 0xE8, 0x28, 0xBD, 0x08, 0x0F, 0xD2, 0x50, 0x47, 0x65, 0x6E, 0x65, 0x72, 0x69, 0x63, 0x00]))!
+        // 00200081083131313131313131
+        let verifyPin : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0x20, 0x00, 0x81, 0x06, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36]))!
         //let readPurse : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x80, 0x5C, 0x00, 0x02, 0x04]))!
         
         session.connect(to: tag!) { (e: Error?) in
             
             nfcIso7816Tag?.sendCommand(apdu: selectApp, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
                 print("selectApp APDU Result: \(data.description)")
-                print("sw1: \(sw1)")
-                print("sw2: \(sw2)")
-                guard error != nil && !(sw1 == 0x90 && sw2 == 0) else {
+                print("sw1: \(String(sw1, radix:16))")
+                print("sw2: \(String(sw2, radix:16))")
+                
+                guard (error == nil || (sw1 == 0x90 && sw2 == 0)) else {
                     session.invalidate(errorMessage: "Application failure")
                     return
                 }
             })
             
-            /*
-            nfcIso7816Tag?.sendCommand(apdu: readPurse, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
-                let moneyString  = data.description
-                let moneyValue = Double(Int(moneyString, radix: 16)!) / 100.0
-                print("Data \(data.description)")
-                session.alertMessage = "羊城通 余额：￥\(moneyValue)"
+            nfcIso7816Tag?.sendCommand(apdu: verifyPin, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
+                print("selectApp APDU Result: \(data.description)")
+                print("sw1: \(String(sw1, radix:16))")
+                print("sw2: \(String(sw2, radix:16))")
+
+                guard (error == nil || (sw1 == 0x90 && sw2 == 0)) else {
+                    session.invalidate(errorMessage: "Application failure")
+                    return
+                }
             })
-            */
+            
         }
         /*
          session.connect(to: tags.first) { (error: Error?) in
