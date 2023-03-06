@@ -17,7 +17,7 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
     
     @IBAction func beginScanning(_ sender: Any) {
         session = NFCTagReaderSession(pollingOption: .iso14443, delegate: self)
-        session?.alertMessage = "Hold your iPhone near the ISO7816 tag to begin transaction 8."
+        session?.alertMessage = "Hold your iPhone near the ISO7816 tag to begin transaction 9."
         session?.begin()
     }
     
@@ -78,7 +78,11 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
                 print("sw1: \(String(sw1, radix:16))")
                 print("sw2: \(String(sw2, radix:16))")
 
-                guard (error == nil || (sw1 == 0x90 && sw2 == 0)) else {
+                // This is the last interaction with the Tag, here we can close the session window with a customized message
+                if (error == nil || (sw1 == 0x90 && sw2 == 0)) {
+                    session.alertMessage = "Lectura exitosa"
+                    session.invalidate()
+                } else {
                     session.invalidate(errorMessage: "Application failure")
                     return
                 }
