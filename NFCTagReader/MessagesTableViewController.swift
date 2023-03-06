@@ -33,13 +33,15 @@ class MessagesTableViewController: UITableViewController, NFCNDEFReaderSessionDe
         }
 
         session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: false)
-        session?.alertMessage = "Hold your iPhone near the item to learn more about it."
+        session?.alertMessage = "Hold your iPhone near the item to learn more about it 5."
         session?.begin()
     }
 
     // MARK: - NFCNDEFReaderSessionDelegate
 
     /// - Tag: processingTagData
+    /// - (void)readerSession:(NFCNDEFReaderSession *)session
+    /// didDetectNDEFs:(NSArray<NFCNDEFMessage *> *)messages;
     func readerSession(_ session: NFCNDEFReaderSession, didDetectNDEFs messages: [NFCNDEFMessage]) {
         DispatchQueue.main.async {
             // Process detected NFCNDEFMessage objects.
@@ -101,11 +103,14 @@ class MessagesTableViewController: UITableViewController, NFCNDEFReaderSessionDe
     }
     
     /// - Tag: sessionBecomeActive
+    /// - (void)readerSessionDidBecomeActive:(NFCNDEFReaderSession *)session;
     func readerSessionDidBecomeActive(_ session: NFCNDEFReaderSession) {
         
     }
     
     /// - Tag: endScanning
+    /// - (void)readerSession:(NFCNDEFReaderSession *)session
+    /// didInvalidateWithError:(NSError *)error;
     func readerSession(_ session: NFCNDEFReaderSession, didInvalidateWithError error: Error) {
         // Check the invalidation reason from the returned error.
         if let readerError = error as? NFCReaderError {
@@ -135,6 +140,7 @@ class MessagesTableViewController: UITableViewController, NFCNDEFReaderSessionDe
 
     func addMessage(fromUserActivity message: NFCNDEFMessage) {
         DispatchQueue.main.async {
+            print("message: \(message)")
             self.detectedMessages.append(message)
             self.tableView.reloadData()
         }
