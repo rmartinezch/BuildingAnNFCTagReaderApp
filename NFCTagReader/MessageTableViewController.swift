@@ -17,7 +17,7 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
     
     @IBAction func beginScanning(_ sender: Any) {
         session = NFCTagReaderSession(pollingOption: .iso14443, delegate: self)
-        session?.alertMessage = "Hold your iPhone near the ISO7816 tag to begin transaction 9."
+        session?.alertMessage = "Hold your iPhone near the ISO7816 tag to begin transaction 12."
         session?.begin()
     }
     
@@ -55,14 +55,30 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
         
         // 00A40400 0E E828BD080FD25047656E65726963
         //let selectApp : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0xA4, 0x04, 0x00, 0x08, 0x50, 0x41, 0x59, 0x2E, 0x54, 0x49, 0x43, 0x4C, 0x00]))!
-        let selectApp : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0xA4, 0x04, 0x00, 0x0E, 0xE8, 0x28, 0xBD, 0x08, 0x0F, 0xD2, 0x50, 0x47, 0x65, 0x6E, 0x65, 0x72, 0x69, 0x63, 0x00]))!
+        let apduSelect : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0xA4, 0x04, 0x00, 0x0E, 0xE8, 0x28, 0xBD, 0x08, 0x0F, 0xD2, 0x50, 0x47, 0x65, 0x6E, 0x65, 0x72, 0x69, 0x63, 0x00]))!
         // 00200081083131313131313131
-        let verifyPin : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0x20, 0x00, 0x81, 0x06, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36]))!
-        //let readPurse : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x80, 0x5C, 0x00, 0x02, 0x04]))!
+        let apduVerifyPin : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0x20, 0x00, 0x81, 0x06, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36]))!
+
+        let mseHeader:[UInt8] = [0x00, 0x22, 0x41, 0xB6]
+        let mseData:[UInt8] = [0x06, 0x80, 0x01, 0x8A, 0x84, 0x01, 0x81]
+        let mse = mseHeader + mseData
+        //print(mse)
+
+        // 002241B60680018A840181
+        //let apduMSE : NFCISO7816APDU = NFCISO7816APDU(data: Data.init([0x00, 0x22, 0x41, 0xB6, 0x06, 0x80, 0x01, 0x8A, 0x84, 0x01, 0x81]))!
+        let apduMSE : NFCISO7816APDU = NFCISO7816APDU(data: Data.init(mse))!
         
+        let psoHeader:[UInt8] = [0x00, 0x2A, 0x9E, 0x9A]
+        let psoData:[UInt8] = [0x16, 0x48, 0x61, 0x73, 0x68, 0x20, 0x64, 0x65, 0x6C, 0x20, 0x64, 0x61, 0x74, 0x6F, 0x20, 0x61, 0x20, 0x66, 0x69, 0x72, 0x6D, 0x61, 0x72]
+        let pso = psoHeader + psoData
+        //print(mse)
+
+        // 002A9E9A 16 486173682064656c206461746f2061206669726d6172
+        let apduPSO : NFCISO7816APDU = NFCISO7816APDU(data: Data.init(pso))!
+                        
         session.connect(to: tag!) { (e: Error?) in
             
-            nfcIso7816Tag?.sendCommand(apdu: selectApp, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
+            nfcIso7816Tag?.sendCommand(apdu: apduSelect, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
                 print("selectApp APDU Result: \(data.description)")
                 print("sw1: \(String(sw1, radix:16))")
                 print("sw2: \(String(sw2, radix:16))")
@@ -73,8 +89,33 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
                 }
             })
             
-            nfcIso7816Tag?.sendCommand(apdu: verifyPin, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
+            nfcIso7816Tag?.sendCommand(apdu: apduVerifyPin, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
                 print("selectApp APDU Result: \(data.description)")
+                print("sw1: \(String(sw1, radix:16))")
+                print("sw2: \(String(sw2, radix:16))")
+
+                // This is the last interaction with the Tag, here we can close the session window with a customized message
+                guard (error == nil || (sw1 == 0x90 && sw2 == 0)) else {
+                    session.invalidate(errorMessage: "Application failure")
+                    return
+                }
+            })
+
+            nfcIso7816Tag?.sendCommand(apdu: apduMSE, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
+                print("MSE APDU Result: \(data.description)")
+                print("sw1: \(String(sw1, radix:16))")
+                print("sw2: \(String(sw2, radix:16))")
+
+                // This is the last interaction with the Tag, here we can close the session window with a customized message
+                guard (error == nil || (sw1 == 0x90 && sw2 == 0)) else {
+                    session.invalidate(errorMessage: "Application failure")
+                    return
+                }
+            })
+           
+            nfcIso7816Tag?.sendCommand(apdu: apduPSO, completionHandler: { (data: Data, sw1: UInt8, sw2: UInt8, error: Error?) in
+                print("PSO APDU Result: \(data.description)")
+                print("PSO APDU Result: \(data.sorted())")
                 print("sw1: \(String(sw1, radix:16))")
                 print("sw2: \(String(sw2, radix:16))")
 
@@ -87,7 +128,6 @@ class MessageTableViewController: UITableViewController, NFCTagReaderSessionDele
                     return
                 }
             })
-            
         }
         /*
          session.connect(to: tags.first) { (error: Error?) in
